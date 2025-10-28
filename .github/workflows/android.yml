@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout repository
+      # 1️⃣ Checkout kode dari repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -27,16 +27,18 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # 4️⃣ Set permission untuk gradlew
+      # 4️⃣ Grant permission untuk Gradle wrapper
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+        working-directory: .
 
       # 5️⃣ Build project
       - name: Build with Gradle
         run: ./gradlew assembleDebug
+        working-directory: .
 
-      # 6️⃣ Jalankan instrumented test di emulator
-      - name: Run instrumented tests on emulator
+      # 6️⃣ Jalankan instrumented test di emulator Android
+      - name: Run Android instrumented tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30
@@ -45,8 +47,9 @@ jobs:
           profile: Nexus 6
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
           script: ./gradlew connectedDebugAndroidTest
+          working-directory: .
 
-      # 7️⃣ Upload laporan hasil test (opsional tapi sangat disarankan)
+      # 7️⃣ Upload laporan hasil test ke tab Artifacts
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
