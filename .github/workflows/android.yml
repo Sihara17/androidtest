@@ -10,12 +10,15 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
+    # 🔥 Ini bagian penting: arahkan ke folder RoomRawSQL1
+    defaults:
+      run:
+        working-directory: RoomRawSQL1
+
     steps:
-      # 1️⃣ Checkout kode dari repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Setup JDK
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -23,22 +26,16 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      # 3️⃣ Setup Android SDK
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # 4️⃣ Grant permission untuk Gradle wrapper
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-        working-directory: .
 
-      # 5️⃣ Build project
       - name: Build with Gradle
         run: ./gradlew assembleDebug
-        working-directory: .
 
-      # 6️⃣ Jalankan instrumented test di emulator Android
-      - name: Run Android instrumented tests
+      - name: Run instrumented tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30
@@ -46,13 +43,12 @@ jobs:
           arch: x86_64
           profile: Nexus 6
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          working-directory: RoomRawSQL1
           script: ./gradlew connectedDebugAndroidTest
-          working-directory: .
 
-      # 7️⃣ Upload laporan hasil test ke tab Artifacts
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: android-test-reports
-          path: app/build/reports/androidTests/connected/
+          path: RoomRawSQL1/app/build/reports/androidTests/connected/
