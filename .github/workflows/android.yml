@@ -1,24 +1,28 @@
-name: Android CI
+name: Android CI (RoomRawSQL1)
 
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
 
-    # 🔥 Ini bagian penting: arahkan ke folder RoomRawSQL1
-    defaults:
-      run:
-        working-directory: RoomRawSQL1
-
     steps:
-      - name: Checkout repository
+      # ✅ 1. Checkout repository tempat workflow ini berada
+      - name: Checkout this repository
         uses: actions/checkout@v4
 
+      # ✅ 2. Clone project target (repo luar)
+      - name: Clone RoomRawSQL1 project
+        run: |
+          git clone https://github.com/khosyzufarannaafi/RoomRawSQL1.git
+          ls RoomRawSQL1
+
+      # ✅ 3. Setup Java
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -26,15 +30,20 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
+      # ✅ 4. Setup Android SDK
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      # ✅ 5. Permission untuk gradlew
       - name: Grant execute permission for gradlew
-        run: chmod +x gradlew
+        run: chmod +x RoomRawSQL1/gradlew
 
+      # ✅ 6. Build project
       - name: Build with Gradle
+        working-directory: RoomRawSQL1
         run: ./gradlew assembleDebug
 
+      # ✅ 7. (Opsional) Jalankan instrumented tests
       - name: Run instrumented tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -46,9 +55,17 @@ jobs:
           working-directory: RoomRawSQL1
           script: ./gradlew connectedDebugAndroidTest
 
+      # ✅ 8. Upload hasil test
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: android-test-reports
           path: RoomRawSQL1/app/build/reports/androidTests/connected/
+
+      # ✅ 9. Upload APK hasil build
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: RoomRawSQL1-debug-apk
+          path: RoomRawSQL1/app/build/outputs/apk/debug/app-debug.apk
