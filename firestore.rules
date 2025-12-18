@@ -1,0 +1,189 @@
+/**
+ * Core Philosophy: This ruleset implements a hierarchical Role-Based Access Control (RBAC) model
+ * for a multi-tenant compliance management system. Access is primarily determined by a user's
+ * assigned organization and their role within it (e.g., 'Admin', 'Org Admin', 'Site Manager').
+ *
+ * Data Structure: The data is structured hierarchically under organizations:
+ *   - /organizations/{organizationId}
+ *     - /sites/{siteId}
+ *       - /documents/{documentId}
+ * User profiles, which contain critical authorization data like roles and organization affiliation,
+ * are stored in a separate top-level /users collection.
+ *
+ * Key Security Decisions:
+ * - RBAC Enforcement: Authorization is not path-based alone. A user's role and organization/site
+ *   memberships are fetched from their /users/{userId} document to make access decisions.
+ * - Admin Override: A global 'Admin' role is granted universal read/write access for administrative
+ *   purposes.
+ * - Restricted Listing: To prevent data leakage, listing of top-level collections like /users and
+ *   /organizations is restricted to global Admins.
+ * - Denormalization for Authorization: The ruleset relies on denormalized fields like 'organizationId'
+ *   on user profiles and 'siteIds' on user profiles to perform efficient and secure checks without
+ *   costly or impossible cross-collection queries in rules.
+ *
+ * Denormalization for Authorization:
+ * This ruleset avoids slow and costly `get()` calls on hierarchical data by denormalizing key
+ * authorization fields. For example, instead of a rule on a document needing to `get()` its parent
+ * site and grandparent organization, we perform a single `get()` to the user's own profile at
+ * `/users/$(request.auth.uid)` to retrieve their organization, role, and site assignments.
+ * This information is then used to authorize access to data within the /organizations tree.
+ *
+ * Structural Segregation:
+ * Data is segregated by collection based on its entity type (organizations, sites, documents, users).
+ * This clear separation simplifies rule logic and aligns with Firestore's query model, ensuring that
+ * list operations do not need complex server-side filtering.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    //-------------------------------------------------------------------------
+    // Helper Functions
+    //-------------------------------------------------------------------------
+
+    /**
+     * isSignedIn
+     * Checks if a user is authenticated.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * isOwner
+     * Checks if the currently authenticated user's UID matches the provided userId.
+     * This is the fundamental check for ownership of a resource.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * getUserData
+     * Retrieves the data from the currently authenticated user's profile document.
+     * This is the primary source for role and organization data.
+     */
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    /**
+     * isAdmin
+     * Checks if the user has the global 'Admin' role.
+     */
+    function isAdmin() {
+      return isSignedIn() && getUserData().role == 'Admin';
+    }
+
+    /**
+     * isOrgMember
+     * Checks if the user is a member of the specified organization.
+     */
+    function isOrgMember(organizationId) {
+      return isSignedIn() && getUserData().organizationId == organizationId;
+    }
+
+    /**
+     * isOrgAdmin
+     * Checks if the user has the 'Org Admin' role for the specified organization.
+     */
+    function isOrgAdmin(organizationId) {
+      return isOrgMember(organizationId) && getUserData().role == 'Org Admin';
+    }
+
+    /**
+     * isSiteManagerForSite
+     * Checks if the user is a manager for a specific site, by looking up
+     * the siteId in their profile's 'siteIds' array.
+     */
+    function isSiteManagerForSite(siteId) {
+      return isSignedIn() && siteId in getUserData().siteIds;
+    }
+
+    /**
+     * isDocumentUploader
+     * Checks if the user is the original uploader of an existing document.
+     */
+    function isDocumentUploader() {
+      return resource != null && isOwner(resource.data.uploadedBy);
+    }
+    
+    /**
+     * docExists
+     * Verifies that a document exists. Used to protect all update and delete operations.
+     */
+    function docExists() {
+      return resource != null;
+    }
+
+    //-------------------------------------------------------------------------
+    // Collection Rules
+    //-------------------------------------------------------------------------
+
+    /**
+     * @description Manages user profile data. A user can create and manage their own profile.
+     * Admins and Org Admins can manage profiles within their scope of authority.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own profile: `request.auth.uid == userId`.
+     * @deny (get) A regular user trying to read another user's profile.
+     * @principle Enforces document ownership and provides administrative override for user management.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin() || (isOrgAdmin(getUserData().organizationId) && getUserData().organizationId == resource.data.organizationId);
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if (isOwner(userId) || isAdmin() || isOrgAdmin(resource.data.organizationId)) && docExists() && request.resource.data.id == resource.data.id;
+      allow delete: if (isOwner(userId) || isAdmin() || isOrgAdmin(resource.data.organizationId)) && docExists();
+    }
+
+    /**
+     * @description Manages top-level organization documents. Creation and modification
+     * are restricted to global Admins, while members of an organization can read their own
+     * organization's details.
+     * @path /organizations/{organizationId}
+     * @allow (get) An authenticated user who is a member of the organization reads its details.
+     * @deny (create) A non-Admin user attempting to create a new organization.
+     * @principle Restricts sensitive top-level resource management to global administrators.
+     */
+    match /organizations/{organizationId} {
+      allow get: if isAdmin() || isOrgMember(organizationId);
+      allow list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && docExists();
+      allow delete: if isAdmin() && docExists();
+
+      /**
+       * @description Manages sites within an organization. Org Admins can manage sites in their
+       * own organization. All members of the organization can view site information.
+       * @path /organizations/{organizationId}/sites/{siteId}
+       * @allow (create) An 'Org Admin' creating a new site within their organization.
+       * @deny (update) A regular user trying to modify a site's details.
+       * @principle Enforces role-based permissions inherited from the parent organization.
+       */
+      match /sites/{siteId} {
+        allow get: if isAdmin() || isOrgMember(organizationId);
+        allow list: if isAdmin() || isOrgMember(organizationId);
+        allow create: if (isAdmin() || isOrgAdmin(organizationId)) && request.resource.data.organizationId == organizationId;
+        allow update: if (isAdmin() || isOrgAdmin(organizationId)) && docExists() && request.resource.data.organizationId == resource.data.organizationId;
+        allow delete: if (isAdmin() || isOrgAdmin(organizationId)) && docExists();
+
+        /**
+         * @description Manages compliance documents for a specific site. Any member of the organization
+         * can upload and read documents. Management (update/delete) is restricted to the uploader,
+         * Site Managers, Org Admins, and global Admins.
+         * @path /organizations/{organizationId}/sites/{siteId}/documents/{documentId}
+         * @allow (create) An authenticated member of the organization uploading a new document.
+         * @deny (delete) A user trying to delete a document they did not upload if they are not a manager.
+         * @principle Combines ownership with role-based permissions for fine-grained control over documents.
+         */
+        match /documents/{documentId} {
+          allow get: if isAdmin() || isOrgMember(organizationId);
+          allow list: if isAdmin() || isOrgMember(organizationId);
+          allow create: if isOrgMember(organizationId) && request.resource.data.uploadedBy == request.auth.uid && request.resource.data.siteId == siteId;
+          allow update: if docExists() && (isAdmin() || isOrgAdmin(organizationId) || isSiteManagerForSite(siteId) || isDocumentUploader()) && request.resource.data.uploadedBy == resource.data.uploadedBy && request.resource.data.siteId == resource.data.siteId;
+          allow delete: if docExists() && (isAdmin() || isOrgAdmin(organizationId) || isSiteManagerForSite(siteId) || isDocumentUploader());
+        }
+      }
+    }
+  }
+}

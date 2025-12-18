@@ -1,0 +1,233 @@
+{
+  "entities": {
+    "Organization": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Organization",
+      "type": "object",
+      "description": "Represents an organization in the DocuSite Compliance Hub system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Organization entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the organization."
+        },
+        "description": {
+          "type": "string",
+          "description": "A description of the organization."
+        }
+      },
+      "required": [
+        "id",
+        "name"
+      ]
+    },
+    "Site": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Site",
+      "type": "object",
+      "description": "Represents a site managed within an organization.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Site entity."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Reference to Organization. (Relationship: Organization 1:N Site)"
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the site."
+        },
+        "location": {
+          "type": "string",
+          "description": "The physical location of the site."
+        }
+      },
+      "required": [
+        "id",
+        "organizationId",
+        "name"
+      ]
+    },
+    "Document": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Document",
+      "type": "object",
+      "description": "Represents a compliance document associated with a site.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Document entity."
+        },
+        "siteId": {
+          "type": "string",
+          "description": "Reference to Site. (Relationship: Site 1:N Document)"
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of the document (e.g., Safety Report, Inspection Record)."
+        },
+        "uploadDate": {
+          "type": "string",
+          "description": "The date when the document was uploaded.",
+          "format": "date-time"
+        },
+        "expiryDate": {
+          "type": "string",
+          "description": "The date when the document expires.",
+          "format": "date-time"
+        },
+        "uploadedBy": {
+          "type": "string",
+          "description": "Reference to User who uploaded the document."
+        },
+        "storageUrl": {
+          "type": "string",
+          "description": "URL of the document in Firebase Storage."
+        }
+      },
+      "required": [
+        "id",
+        "siteId",
+        "category",
+        "uploadDate",
+        "uploadedBy",
+        "storageUrl"
+      ]
+    },
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents a user of the DocuSite Compliance Hub system. Does NOT contain authentication data.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the User entity.  This corresponds to the Firebase Auth UID."
+        },
+        "organizationId": {
+          "type": "string",
+          "description": "Reference to Organization. (Relationship: Organization 1:N User)"
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the user.",
+          "format": "email"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The display name of the user."
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user (e.g., Admin, Org Admin, Site Manager)."
+        },
+        "siteIds": {
+          "type": "array",
+          "description": "References to Sites. (Relationship: User N:N Site)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "organizationId",
+        "email",
+        "displayName",
+        "role"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/organizations/{organizationId}",
+        "definition": {
+          "entityName": "Organization",
+          "schema": {
+            "$ref": "#/backend/entities/Organization"
+          },
+          "description": "Stores organization data.",
+          "params": [
+            {
+              "name": "organizationId",
+              "description": "The unique identifier for the organization."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/organizations/{organizationId}/sites/{siteId}",
+        "definition": {
+          "entityName": "Site",
+          "schema": {
+            "$ref": "#/backend/entities/Site"
+          },
+          "description": "Stores site data. Includes denormalized 'organizationId' for authorization independence.",
+          "params": [
+            {
+              "name": "organizationId",
+              "description": "The unique identifier for the organization."
+            },
+            {
+              "name": "siteId",
+              "description": "The unique identifier for the site."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/organizations/{organizationId}/sites/{siteId}/documents/{documentId}",
+        "definition": {
+          "entityName": "Document",
+          "schema": {
+            "$ref": "#/backend/entities/Document"
+          },
+          "description": "Stores document metadata. Includes denormalized 'siteId' for authorization independence.",
+          "params": [
+            {
+              "name": "organizationId",
+              "description": "The unique identifier for the organization."
+            },
+            {
+              "name": "siteId",
+              "description": "The unique identifier for the site."
+            },
+            {
+              "name": "documentId",
+              "description": "The unique identifier for the document."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "Stores user data, including role and organizationId.  Includes denormalized 'organizationId' and 'siteIds' for authorization independence.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user (Firebase Auth UID)."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to ensure Authorization Independence, Role-Based Access Control (RBAC), and scalable querying while adhering to the principles of DBAC (Database-Based Access Control) and QAPs (Rules are not Filters). It denormalizes authorization data to avoid `get()` calls in security rules and facilitates atomic operations. The structure segregates data based on access requirements and uses consistent access modeling patterns.\n\nOrganizations are at the top level. Each Organization has Sites, and each Site has Documents. User roles and site access are managed at the Organization level and denormalized to the User document.\n\n**Authorization Independence (CRITICAL):**\n*   The `organizationId` field is present in both the `User` and `Site` entities, ensuring authorization context without requiring hierarchical `get()` calls. The site ID is also denormalized to the documents to enable site level filtering without `get()` calls.\n*   User roles (Admin, Org Admin, Site Manager) are stored directly in the `User` document, which removes the need for custom claims or external authorization services. Additionally the sites that a user has access to is stored directly on the User document to avoid having to use `get()` calls to fetch site access data.\n\n**QAPs (Rules are not Filters):**\n*   Data is segregated into collections based on access requirements. For example, organizations are in one collection, sites in another, and documents in another. This prevents the need to filter data based on authorization rules.\n*   The membership model is not used in this case because ownership is path-based. The path structure `/organizations/{organizationId}/sites/{siteId}/documents/{documentId}` ensures that only users with access to a particular organization and site can access the documents within that site. The user's role, combined with the path, enables secure `list` operations. Only users with a 'Admin' role can list across all organizations.\n\n**Invariants:**\n*   The `uploadedBy` field in the `Document` entity ensures the integrity of document ownership. Timestamps (`uploadDate`, `expiryDate`) are directly stored in the document. Denormalized data like `organizationId` in `Site` and `User` maintains structural integrity."
+  }
+}
