@@ -22,7 +22,7 @@ export default function LoginPage() {
   const router = useRouter();
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
-  const [email, setEmail] = useState("admin@docusite.com");
+  const [email, setEmail] = useState("user@example.com");
   const [password, setPassword] = useState("password");
   const [isSigningIn, setIsSigningIn] = useState(false);
 
@@ -98,7 +98,7 @@ export default function LoginPage() {
               {isSigningIn && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign in
             </Button>
-            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isSigningIn}>
+            <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isSigningIn}>
               Sign in with Google
             </Button>
           </form>
