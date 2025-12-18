@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Organization": {
@@ -146,7 +147,6 @@
   "auth": {
     "providers": [
       "password",
-      "anonymous",
       "google.com"
     ]
   },
@@ -232,3 +232,5 @@
     "reasoning": "The Firestore structure is designed to ensure Authorization Independence, Role-Based Access Control (RBAC), and scalable querying while adhering to the principles of DBAC (Database-Based Access Control) and QAPs (Rules are not Filters). It denormalizes authorization data to avoid `get()` calls in security rules and facilitates atomic operations. The structure segregates data based on access requirements and uses consistent access modeling patterns.\n\nOrganizations are at the top level. Each Organization has Sites, and each Site has Documents. User roles and site access are managed at the Organization level and denormalized to the User document.\n\n**Authorization Independence (CRITICAL):**\n*   The `organizationId` field is present in both the `User` and `Site` entities, ensuring authorization context without requiring hierarchical `get()` calls. The site ID is also denormalized to the documents to enable site level filtering without `get()` calls.\n*   User roles (Admin, Org Admin, Site Manager) are stored directly in the `User` document, which removes the need for custom claims or external authorization services. Additionally the sites that a user has access to is stored directly on the User document to avoid having to use `get()` calls to fetch site access data.\n\n**QAPs (Rules are not Filters):**\n*   Data is segregated into collections based on access requirements. For example, organizations are in one collection, sites in another, and documents in another. This prevents the need to filter data based on authorization rules.\n*   The membership model is not used in this case because ownership is path-based. The path structure `/organizations/{organizationId}/sites/{siteId}/documents/{documentId}` ensures that only users with access to a particular organization and site can access the documents within that site. The user's role, combined with the path, enables secure `list` operations. Only users with a 'Admin' role can list across all organizations.\n\n**Invariants:**\n*   The `uploadedBy` field in the `Document` entity ensures the integrity of document ownership. Timestamps (`uploadDate`, `expiryDate`) are directly stored in the document. Denormalized data like `organizationId` in `Site` and `User` maintains structural integrity."
   }
 }
+
+    
