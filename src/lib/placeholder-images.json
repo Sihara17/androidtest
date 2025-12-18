@@ -1,3 +1,16 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "user-avatar-1",
+      "description": "A portrait of an admin user",
+      "imageUrl": "https://images.unsplash.com/photo-1598625873873-52f9aefd7d9d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHx3b21hbiUyMHNtaWxpbmd8ZW58MHx8fHwxNzY1OTYyNjcxfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman smiling"
+    },
+    {
+      "id": "user-avatar-2",
+      "description": "A portrait of a site manager",
+      "imageUrl": "https://images.unsplash.com/photo-1720672284660-cfecee298779?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxtYW4lMjBwcm9mZXNzaW9uYWx8ZW58MHx8fHwxNzY2MDI2MzU1fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man professional"
+    }
+  ]
 }
