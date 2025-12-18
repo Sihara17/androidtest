@@ -15,16 +15,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/logo";
 import { useAuth, useUser } from "@/firebase";
-import { initiateEmailSignIn, initiateGoogleSignIn } from "@/firebase/non-blocking-login";
+import { initiateEmailSignUp } from "@/firebase/non-blocking-login";
 import { Loader2 } from "lucide-react";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
   const auth = useAuth();
   const { user, isUserLoading } = useUser();
-  const [email, setEmail] = useState("user@example.com");
-  const [password, setPassword] = useState("password");
-  const [isSigningIn, setIsSigningIn] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSigningUp, setIsSigningUp] = useState(false);
 
   useEffect(() => {
     if (!isUserLoading && user) {
@@ -32,15 +32,10 @@ export default function LoginPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSigningIn(true);
-    initiateEmailSignIn(auth, email, password);
-  };
-  
-  const handleGoogleSignIn = () => {
-    setIsSigningIn(true);
-    initiateGoogleSignIn(auth);
+    setIsSigningUp(true);
+    initiateEmailSignUp(auth, email, password);
   };
 
   if (isUserLoading || user) {
@@ -58,13 +53,13 @@ export default function LoginPage() {
           <div className="mb-4 flex justify-center">
             <Logo />
           </div>
-          <CardTitle className="font-headline text-2xl">Welcome Back</CardTitle>
+          <CardTitle className="font-headline text-2xl">Create an Account</CardTitle>
           <CardDescription>
-            Enter your credentials to access your dashboard.
+            Enter your email and password to get started.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="grid gap-4" onSubmit={handleSignIn}>
+          <form className="grid gap-4" onSubmit={handleSignUp}>
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -77,15 +72,7 @@ export default function LoginPage() {
               />
             </div>
             <div className="grid gap-2">
-              <div className="flex items-center">
                 <Label htmlFor="password">Password</Label>
-                <Link
-                  href="#"
-                  className="ml-auto inline-block text-sm underline"
-                >
-                  Forgot your password?
-                </Link>
-              </div>
               <Input
                 id="password"
                 type="password"
@@ -94,18 +81,15 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isSigningIn}>
-              {isSigningIn && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Sign in
-            </Button>
-            <Button variant="outline" className="w-full" type="button" onClick={handleGoogleSignIn} disabled={isSigningIn}>
-              Sign in with Google
+            <Button type="submit" className="w-full" disabled={isSigningUp}>
+              {isSigningUp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Sign up
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">
-            Don&apos;t have an account?{" "}
-            <Link href="/signup" className="underline">
-              Sign up
+            Already have an account?{" "}
+            <Link href="/login" className="underline">
+              Sign in
             </Link>
           </div>
         </CardContent>
