@@ -14,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/logo";
-import { useAuth, useUser } from "@/firebase";
+import { useAuth, useUser, errorEmitter } from "@/firebase";
 import { initiateEmailSignIn, initiateGoogleSignIn } from "@/firebase/non-blocking-login";
 import { Loader2 } from "lucide-react";
 
@@ -31,6 +31,17 @@ export default function LoginPage() {
       router.push("/dashboard");
     }
   }, [user, isUserLoading, router]);
+
+  useEffect(() => {
+    const stopSpinner = () => setIsSigningIn(false);
+    // @ts-ignore
+    errorEmitter.on('auth-error-handled', stopSpinner);
+
+    return () => {
+        // @ts-ignore
+        errorEmitter.off('auth-error-handled', stopSpinner);
+    }
+  }, []);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
