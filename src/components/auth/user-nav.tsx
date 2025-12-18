@@ -1,3 +1,10 @@
+
+'use client';
+
+import { useRouter } from 'next/navigation';
+import { useAuth, useUser } from '@/firebase';
+import { signOut } from 'firebase/auth';
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,21 +18,38 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { mockUser } from "@/lib/data";
 import Link from "next/link";
-import { CreditCard, LogOut, Settings, User } from "lucide-react";
+import { CreditCard, LogOut, Settings, User as UserIcon, Loader2 } from "lucide-react";
 
 export function UserNav() {
-  const user = mockUser;
-  const initials = user.name
-    .split(" ")
-    .map((n) => n[0])
-    .join("");
+  const router = useRouter();
+  const auth = useAuth();
+  const { user, isUserLoading } = useUser();
+
+  const handleSignOut = async () => {
+    await signOut(auth);
+    router.push('/login');
+  };
+
+  if (isUserLoading) {
+    return <Loader2 className="h-6 w-6 animate-spin" />;
+  }
+
+  if (!user) {
+    return (
+      <Button asChild>
+        <Link href="/login">Sign In</Link>
+      </Button>
+    );
+  }
+
+  const initials = user.displayName?.split(" ").map((n) => n[0]).join("") || user.email?.charAt(0).toUpperCase();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-9 w-9">
-            <AvatarImage src={user.avatarUrl} alt={user.name} data-ai-hint="woman smiling" />
+            <AvatarImage src={user.photoURL ?? undefined} alt={user.displayName ?? ''} data-ai-hint="woman smiling" />
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
         </Button>
@@ -33,7 +57,7 @@ export function UserNav() {
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.name}</p>
+            <p className="text-sm font-medium leading-none">{user.displayName || 'No Name'}</p>
             <p className="text-xs leading-none text-muted-foreground">
               {user.email}
             </p>
@@ -41,25 +65,29 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <User className="mr-2 h-4 w-4" />
-            <span>Profile</span>
+          <DropdownMenuItem asChild>
+            <Link href="/profile">
+                <UserIcon className="mr-2 h-4 w-4" />
+                <span>Profile</span>
+            </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem>
-            <CreditCard className="mr-2 h-4 w-4" />
-            <span>Billing</span>
+          <DropdownMenuItem asChild>
+            <Link href="/billing">
+                <CreditCard className="mr-2 h-4 w-4" />
+                <span>Billing</span>
+            </Link>
           </DropdownMenuItem>
-          <DropdownMenuItem>
-            <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
+          <DropdownMenuItem asChild>
+            <Link href="/settings">
+                <Settings className="mr-2 h-4 w-4" />
+                <span>Settings</span>
+            </Link>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-            <Link href="/login">
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
-            </Link>
+        <DropdownMenuItem onClick={handleSignOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            <span>Log out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
