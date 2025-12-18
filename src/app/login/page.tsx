@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/logo";
 import { useAuth, useUser } from "@/firebase";
-import { initiateEmailSignIn } from "@/firebase/non-blocking-login";
+import { initiateEmailSignIn, initiateGoogleSignIn } from "@/firebase/non-blocking-login";
 import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
@@ -38,6 +38,11 @@ export default function LoginPage() {
     initiateEmailSignIn(auth, email, password);
   };
   
+  const handleGoogleSignIn = () => {
+    setIsSigningIn(true);
+    initiateGoogleSignIn(auth);
+  };
+
   if (isUserLoading || user) {
     return (
         <div className="flex min-h-screen items-center justify-center">
@@ -93,7 +98,7 @@ export default function LoginPage() {
               {isSigningIn && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign in
             </Button>
-            <Button variant="outline" className="w-full" disabled>
+            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={isSigningIn}>
               Sign in with Google
             </Button>
           </form>
